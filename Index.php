@@ -34,3 +34,18 @@ function respondError(int $statusCode, string $message): void
 {
     respondJson($statusCode, ["error" => $message]);
 }
+function readJsonBody(): array
+{
+    $raw = file_get_contents("php://input");
+    if ($raw === false || trim($raw) === '') {
+        respondError(400, "El cuerpo de la petición está vacío");
+    }
+    $data = json_decode($raw, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        respondError(400, "JSON inválido:" . json_last_error_msg());
+    }
+    if (!is_array($data)) {
+        respondError(400, "El JSON debe representar un objeto");
+    }
+    return $data;
+}
