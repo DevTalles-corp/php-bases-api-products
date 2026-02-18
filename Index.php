@@ -17,10 +17,20 @@ function resolveRoute(array $segments): array
     $id = $segments[$pos + 1] ?? null;
     if ($id !== null) {
         if (!ctype_digit($id)) {
-            // respondError(400, "El id debe ser numérico");
+            respondError(400, "El id debe ser numérico");
         }
         // ["products",2]
         return [$resource, (int)$id];
     }
     return [$resource, null]; // ["products",null]
+}
+function respondJson(int $statusCode, $payload): void
+{
+    http_response_code($statusCode);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+function respondError(int $statusCode, string $message): void
+{
+    respondJson($statusCode, ["error" => $message]);
 }
