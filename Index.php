@@ -81,3 +81,27 @@ function saveProducts(array $products): void
     file_put_contents($path, json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     @chmod($path, 0666);
 }
+function finById(array $products, int $id): ?array
+{
+    foreach ($products as $product) {
+        if ((int)$product["id"] === $id) {
+            return $product;
+        }
+    }
+    return null;
+}
+
+//Flujo principal (handlers)
+[$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
+if ($method === "GET" && $resourceId === null) {
+    $products = loadProducts();
+    respondJson(200, $products);
+}
+if ($method === "GET" && $resourceId !== null) {
+    $products = loadProducts();
+    $product = finById($products, $resourceId);
+    if ($product === null) {
+        respondError(404, "Producto no encontrado");
+    }
+    respondJson(200, $product);
+}
