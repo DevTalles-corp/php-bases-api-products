@@ -49,3 +49,35 @@ function readJsonBody(): array
     }
     return $data;
 }
+
+function storagePath(): string
+{
+    return __DIR__ . "/storage_products.json";
+}
+function loadProducts(): array
+{
+    $path = storagePath();
+    if (!file_exists($path)) {
+        $seed = [
+            ["id" => 1, "name" => "Laptop", "price" => 1200.00, "stock" => 3],
+            ["id" => 2, "name" => "Mouse", "price" => 25.00, "stock" => 15],
+        ];
+        $dir = dirname($path);
+        if (!is_writable($dir)) {
+            respondError(500, "No se puede crear el archivo de almacenamiento. 
+                      La carpeta '$dir' no tiene permisos de escritura. 
+                      Asigna permisos de escritura a la carpeta para continuar.");
+        }
+        file_put_contents($path, json_encode($seed, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        return $seed;
+    }
+    $content = file_get_contents($path);
+    $data = json_decode($content ? $content : "[]", true);
+    return is_array($data) ? $data : [];
+}
+function saveProducts(array $products): void
+{
+    $path = storagePath();
+    file_put_contents($path, json_encode($products, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    @chmod($path, 0666);
+}
