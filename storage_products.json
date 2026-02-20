@@ -10,5 +10,11 @@
         "name": "Mouse",
         "price": 25,
         "stock": 15
+    },
+    {
+        "id": 3,
+        "name": "Nuevo producto",
+        "price": 110,
+        "stock": 3
     }
 ]

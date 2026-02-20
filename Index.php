@@ -90,7 +90,73 @@ function finById(array $products, int $id): ?array
     }
     return null;
 }
+function nextId(array $products): int
+{
+    $maxId = 0;
+    foreach ($products as $product) {
+        $maxId = max($maxId, (int)($product["id"] ?? 0));
+    }
+    return $maxId + 1;
+}
 
+function validateProductPayload(array $data, bool $isCreate, bool $requireAllFields = false): array
+{
+    $errors = [];
+    $mustHaveAll = $isCreate || $requireAllFields;
+
+    $fields = [
+        "name" => [
+            "requiredMessage" => "El nombre es obligatorio",
+            "rules" => function ($value) use (&$errors) {
+                $value = trim((string)$value);
+
+                if ($value === "") {
+                    $errors[] = "El nombre no puede estar vacío";
+                }
+
+                if (mb_strlen($value) < 2) {
+                    $errors[] = "El nombre debe tener al menos 2 caracteres";
+                }
+            }
+        ],
+        "price" => [
+            "requiredMessage" => "El precio es obligatorio",
+            "rules" => function ($value) use (&$errors) {
+                if (!is_numeric($value)) {
+                    $errors[] = "El precio debe ser númerico";
+                }
+                if ((float)$value <= 0) {
+                    $errors[] = "El precio debe ser mayor a cero";
+                }
+            }
+        ],
+        "stock" => [
+            "requiredMessage" => "El stock es obligatorio",
+            "rules" => function ($value) use (&$errors) {
+                if (!is_numeric($value)) {
+                    $errors[] = "El stock debe ser númerico";
+                }
+                if ((float)$value <= 0) {
+                    $errors[] = "El stock debe ser mayor a cero";
+                }
+            }
+        ]
+    ];
+
+    foreach ($fields as $field => $config) {
+
+        if ($mustHaveAll && !array_key_exists($field, $data)) {
+            $errors[] = $config["requiredMessage"];
+            continue;
+        }
+
+        if (array_key_exists($field, $data)) {
+            $config["rules"]($data[$field]);
+        }
+    }
+
+    return $errors;
+}
 //Flujo principal (handlers)
 [$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
 if ($method === "GET" && $resourceId === null) {
@@ -104,4 +170,28 @@ if ($method === "GET" && $resourceId !== null) {
         respondError(404, "Producto no encontrado");
     }
     respondJson(200, $product);
+}
+if ($method === "POST" && $resourceId === null) {
+    $payload = readJsonBody();
+    $errors = validateProductPayload($payload, isCreate: true);
+    if (count($errors) > 0) {
+        respondJson(422, ["errors" => $errors]);
+    }
+    $products = loadProducts();
+    $newProduct =
+        [
+            "id" => nextId($products),
+            "name" => trim((string)$payload["name"]),
+            "price" => (float)$payload["price"],
+            "stock" => (float)$payload["stock"]
+        ];
+    $products[] = $newProduct;
+    saveProducts($products);
+    respondJson(
+        201,
+        [
+            "message" => "Producto creado correctamente",
+            "data" => $newProduct
+        ]
+    );
 }
