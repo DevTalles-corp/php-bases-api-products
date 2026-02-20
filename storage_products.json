@@ -1,9 +1,9 @@
 [
     {
         "id": 1,
-        "name": "Laptop",
-        "price": 1200,
-        "stock": 3
+        "name": "Nueva laptop",
+        "price": 1400,
+        "stock": 5
     },
     {
         "id": 2,
