@@ -167,74 +167,100 @@ function findIndexById(array $products, int $id): int
     return -1;
 }
 //Flujo principal (handlers)
-[$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
-if ($method === "GET" && $resourceId === null) {
-    $products = loadProducts();
-    respondJson(200, $products);
-}
-if ($method === "GET" && $resourceId !== null) {
-    $products = loadProducts();
-    $product = finById($products, $resourceId);
-    if ($product === null) {
-        respondError(404, "Producto no encontrado");
+try {
+    [$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
+    if ($resource !== "products") {
+        respondError(404, "Recurso no encontrado. Usa /products");
     }
-    respondJson(200, $product);
-}
-if ($method === "POST" && $resourceId === null) {
-    $payload = readJsonBody();
-    $errors = validateProductPayload($payload, isCreate: true);
-    if (count($errors) > 0) {
-        respondJson(422, ["errors" => $errors]);
+    if ($method === "GET" && $resourceId === null) {
+        $products = loadProducts();
+        respondJson(200, $products);
     }
-    $products = loadProducts();
-    $newProduct =
-        [
-            "id" => nextId($products),
-            "name" => trim((string)$payload["name"]),
-            "price" => (float)$payload["price"],
-            "stock" => (float)$payload["stock"]
-        ];
-    $products[] = $newProduct;
-    saveProducts($products);
-    respondJson(
-        201,
-        [
-            "message" => "Producto creado correctamente",
-            "data" => $newProduct
-        ]
-    );
-}
-if (($method === "PUT" || $method === "PATCH") && $resourceId !== null) {
-    $payload = readJsonBody();
-    $isCreate = false;
-    $requireAllFields = ($method === "PUT");
-    $errors = validateProductPayload($payload, $isCreate, $requireAllFields);
-    if (count($errors) > 0) {
-        respondJson(422, ["errors" => $errors]);
+    if ($method === "GET" && $resourceId !== null) {
+        $products = loadProducts();
+        $product = finById($products, $resourceId);
+        if ($product === null) {
+            respondError(404, "Producto no encontrado");
+        }
+        respondJson(200, $product);
     }
-    $products = loadProducts();
-    $index = findIndexById($products, $resourceId);
-    if ($index === -1) {
-        respondError(404, "Producto no econtrado");
+    if ($method === "POST" && $resourceId === null) {
+        $payload = readJsonBody();
+        $errors = validateProductPayload($payload, isCreate: true);
+        if (count($errors) > 0) {
+            respondJson(422, ["errors" => $errors]);
+        }
+        $products = loadProducts();
+        $newProduct =
+            [
+                "id" => nextId($products),
+                "name" => trim((string)$payload["name"]),
+                "price" => (float)$payload["price"],
+                "stock" => (float)$payload["stock"]
+            ];
+        $products[] = $newProduct;
+        saveProducts($products);
+        respondJson(
+            201,
+            [
+                "message" => "Producto creado correctamente",
+                "data" => $newProduct
+            ]
+        );
     }
-    $current = $products[$index];
-    $updated = $current;
-    if (array_key_exists("name", $payload)) {
-        $updated["name"] = trim((string)$payload["name"]);
+    if (($method === "PUT" || $method === "PATCH") && $resourceId !== null) {
+        $payload = readJsonBody();
+        $isCreate = false;
+        $requireAllFields = ($method === "PUT");
+        $errors = validateProductPayload($payload, $isCreate, $requireAllFields);
+        if (count($errors) > 0) {
+            respondJson(422, ["errors" => $errors]);
+        }
+        $products = loadProducts();
+        $index = findIndexById($products, $resourceId);
+        if ($index === -1) {
+            respondError(404, "Producto no encontrado");
+        }
+        $current = $products[$index];
+        $updated = $current;
+        if (array_key_exists("name", $payload)) {
+            $updated["name"] = trim((string)$payload["name"]);
+        }
+        if (array_key_exists("price", $payload)) {
+            $updated["price"] = (float)$payload["price"];
+        }
+        if (array_key_exists("stock", $payload)) {
+            $updated["stock"] = (float)$payload["stock"];
+        }
+        $products[$index] = $updated;
+        saveProducts($products);
+        respondJson(
+            200,
+            [
+                "message" => "Producto actualizado correctamente",
+                "data" => $updated
+            ]
+        );
     }
-    if (array_key_exists("price", $payload)) {
-        $updated["price"] = (float)$payload["price"];
+
+    if ($method === "DELETE" && $resourceId !== null) {
+        $products = loadProducts();
+        $index = findIndexById($products, $resourceId);
+        if ($index === -1) {
+            respondError(404, "Producto no encontrado");
+        }
+        $deleted = $products[$index];
+        array_splice($products, $index, 1);
+        saveProducts($products);
+        respondJson(
+            200,
+            [
+                "message" => "Producto eliminado correctamente",
+                "data" => $deleted
+            ]
+        );
     }
-    if (array_key_exists("stock", $payload)) {
-        $updated["stock"] = (float)$payload["stock"];
-    }
-    $products[$index] = $updated;
-    saveProducts($products);
-    respondJson(
-        200,
-        [
-            "message" => "Producto actualizado correctamente",
-            "data" => $updated
-        ]
-    );
+    respondError(405, "Método no permitido para esta ruta");
+} catch (Exception $expection) {
+    respondError(500, "Error interno: " . $expection->getMessage());
 }

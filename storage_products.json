@@ -6,12 +6,6 @@
         "stock": 5
     },
     {
-        "id": 2,
-        "name": "Mouse",
-        "price": 25,
-        "stock": 15
-    },
-    {
         "id": 3,
         "name": "Nuevo producto",
         "price": 110,
