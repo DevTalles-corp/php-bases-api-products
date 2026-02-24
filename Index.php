@@ -41,6 +41,14 @@ function getAllProducts(PDO $pdo): array
     $stmt = $pdo->query($sql);
     return $stmt->fetchAll();
 }
+function GetProductById(PDO $pdo, int $id): ?array
+{
+    $sql = "SELECT id,name,price,stock,created_at FROM products WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(["id" => $id]);
+    $product = $stmt->fetch();
+    return $product !== false ? $product : null;
+}
 try {
     $pdo = getConnection();
     [$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
@@ -50,6 +58,16 @@ try {
     if ($method === "GET" && $resourceId === null) {
         $products = getAllProducts($pdo);
         respondJson(200, $products);
+    }
+    if ($method === "GET" && $resourceId !== null) {
+        if ($resourceId <= 0) {
+            respondError(400, "El id debe ser un número válido");
+        }
+        $product = GetProductById($pdo, $resourceId);
+        if ($product === null) {
+            respondError(404, "Producto no encontrado");
+        }
+        respondJson(200, $product);
     }
 } catch (PDOException $e) {
     respondError(500, "Error de conexión: " . $e->getMessage());
