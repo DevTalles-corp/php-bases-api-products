@@ -146,6 +146,14 @@ function updateProduct(PDO $pdo, int $id, array $data): bool
     ]);
     return $stmt->rowCount() > 0;
 }
+function deleteProduct(PDO $pdo, int $id): bool
+{
+    $sql = "DELETE FROM products WHERE id=:id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(["id" => $id]);
+    return $stmt->rowCount() > 0;
+}
+
 try {
     $pdo = getConnection();
     [$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
@@ -220,6 +228,26 @@ try {
             [
                 "message" => "Producto actualizado correctamente",
                 "data" => $updated
+            ]
+        );
+    }
+    if ($method === "DELETE" && $resourceId !== null) {
+        if ($resourceId <= 0) {
+            respondError(400, "El id debe ser un número válido");
+        }
+        $existing = getProductById($pdo, $resourceId);
+        if ($existing === null) {
+            respondError(404, "Producto no encontrado");
+        }
+        $deleted = deleteProduct($pdo, $resourceId);
+        if (!$deleted) {
+            respondError(409, "No se pudo eliminar el producto");
+        }
+        respondJson(
+            200,
+            [
+                "message" => "Producto eliminado correctamente",
+                "data" => $existing
             ]
         );
     }
