@@ -134,6 +134,18 @@ function createProduct(PDO $pdo, array $data): int
     ]);
     return (int)$pdo->lastInsertId();
 }
+function updateProduct(PDO $pdo, int $id, array $data): bool
+{
+    $sql = "UPDATE products SET name = :name, price=:price, stock=:stock WHERE id=:id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        "id" => $id,
+        "name" => trim((string)$data["name"]),
+        "price" => (float)$data["price"],
+        "stock" => (float)$data["stock"]
+    ]);
+    return $stmt->rowCount() > 0;
+}
 try {
     $pdo = getConnection();
     [$resource, $resourceId] = resolveRoute($segments); //["products", 2] ,["products", null], [null, null]
@@ -167,6 +179,47 @@ try {
             [
                 "message" => "Producto creado correctamente",
                 "data" => $newProduct
+            ]
+        );
+    }
+    if (($method === "PUT" || $method === "PATCH") && $resourceId !== null) {
+        if ($resourceId <= 0) {
+            respondError(400, "El id debe ser un número válido");
+        }
+        $existing = getProductById($pdo, $resourceId);
+        if ($existing === null) {
+            respondError(404, "Producto no encontrado");
+        }
+        $payload = readJsonBody();
+        $isCreate = false;
+        $requireAllFields = ($method === "PUT");
+        $errors = validateProductPayload($payload, $isCreate, $requireAllFields);
+        if (count($errors) > 0) {
+            respondJson(422, ["errors" => $errors]);
+        }
+        $merged = [];
+        if (array_key_exists("name", $payload)) {
+            $merged["name"] = trim((string)$payload["name"]);
+        } else {
+            $merged["name"] = trim((string)$existing["name"]);
+        }
+        if (array_key_exists("price", $payload)) {
+            $merged["price"] = (float)$payload["price"];
+        } else {
+            $merged["price"] = (float)$existing["price"];
+        }
+        if (array_key_exists("stock", $payload)) {
+            $merged["stock"] = (float)$payload["stock"];
+        } else {
+            $merged["stock"] = (float)$existing["stock"];
+        }
+        updateProduct($pdo, $resourceId, $merged);
+        $updated = getProductById($pdo, $resourceId);
+        respondJson(
+            200,
+            [
+                "message" => "Producto actualizado correctamente",
+                "data" => $updated
             ]
         );
     }
